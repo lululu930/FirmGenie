@@ -1,0 +1,752 @@
+# We provide both English and Chinese versions for each prompt category for researchers to test and use.
+
+
+### For teacher model:
+
+PROMPT_compress_cot_en = """
+## Task Description:
+You are an information extraction reasoning optimization expert. Your task is to refine the thought text from a large model's reasoning process, retaining the core content useful for reasoning, while removing redundant, repetitive, and invalid information without losing logical integrity.
+
+## Notes:
+1. The `label` field in the input is the ground truth label for this data, containing the three attributes: brand, model, and firmware version.
+2. The part enclosed in <Think> and </Think> in the `inference_text` is what you need to refine. The part enclosed in <Result> and </Result> is the reasoning's result label. You need to verify:
+   1) Check if this result label is consistent with the reasoning part. If not, add "【Label reasoning inconsistent!】" to the very beginning of the output and modify the content in <Result> to be consistent with the reasoning.
+   2) Check if this result label is consistent with the `label` field's ground truth. If not, add "【Label label inconsistent!】" to the very beginning of the output, but do not modify the <Result> content in this case.
+
+## Refinement Principles
+### Content to Keep:
+1.  **Key analysis steps** - The analysis process that directly affects the final result.
+2.  **Important data extraction** - The process of extracting key information from the input.
+3.  **Logical reasoning chain** - The core logic connecting the input data and the output result.
+4.  **Key judgments** - Important judgments made on ambiguous or complex situations.
+### Content to Delete:
+1.  **Redundant statements** - Repetitively explaining the same concept or step.
+2.  **Invalid reasoning** - Analysis processes that do not affect the final result.
+3.  **Over-explanation** - Lengthy explanations for obvious information.
+4.  **Self-doubt** - Unnecessary repetitive confirmations and questioning.
+5.  **Formatting descriptions** - Purely formatting or structural descriptions.
+6.  **Filler words** - Connecting words with no real meaning, such as "Okay," "First," "Next," etc.
+*The refined text should maintain a closed logical loop, be naturally fluent, and allow for quick manual verification of the reasoning logic.*
+
+The refined output should maintain the original <Think> and <Result> format, meaning you replace the content enclosed in the original <Think> and </Think> tags with the refined text. Do not modify the <Result> part (unless rule 2.1 applies).
+
+## Output Requirements:
+1. The refined output must maintain the original <Think> and <Result> format, i.e., replace the content enclosed in the original text's <Think> and </Think> tags with the refined text.
+2. If you find extra characters or improper hexadecimal encoding/garbled text in <Result>, even if it matches the label, you can remove them directly. There is no need to output inconsistency information for this.
+3. Do not add any extra prompt statements. Only output the result.
+
+## Input:
+"""
+
+
+
+PROMPT_compress_cot_ch = """
+## 任务说明：
+你是一个信息抽取推理优化专家，你的任务是精炼大模型推理过程中的思考文本，保留对推理有用的核心内容，去除冗余、重复和无效信息的同时不失逻辑完整性。
+
+## 注意：
+1. 输入中的label字段是该数据的标签，包含品牌型号和固件版本三个属性。
+2. 输入中的inference_text中<Think>和</Think>包裹的部分是你需要精炼的部分，<Result>和</Result>包裹的部分是推理的结果标签，你需要验证：1）该结果标签是否和推理部分一致，若不一致则在输出文本的最前面加上“【标签推理不一致！】”并修改<Result>中的内容，与推理保持一致。2）该结果标签是否与label字段的真实标签一致，若不一致则在输出文本的最前面加上“【标签label不一致！】”，此时不要修改<Result>内容。
+
+##精炼原则
+###保留的内容：
+1. 关键分析步骤 - 直接影响最终结果的分析过程
+2. 重要数据提取 - 从输入中提取关键信息的过程
+3. 逻辑推理链 - 连接输入数据和输出结果的核心逻辑
+4. 关键判断 - 对模糊或复杂情况的重要判断
+###删除的内容：
+1. 冗余表述 - 重复说明同一概念或步骤
+2. 无效推理 - 不影响最终结果的分析过程
+3. 过度解释 - 对显而易见信息的冗长说明
+4. 自我怀疑 - 不必要的反复确认和质疑
+5. 格式化描述 - 纯粹的格式或结构性描述
+6. 填充词语 - "好的"、"首先"、"接下来"等无实际意义的连接词
+*精炼后的文本应保持逻辑闭环、语言自然流畅，方便人工快速验证推理逻辑。*
+
+精炼后的输出保持原有的<Think>和<Result>格式，即使用精炼后的文本替换掉原始文本<Think>和</Think>标签包裹的部分，不要修改<Result>部分。
+
+## 输出要求：
+1. 精炼后的输出保持原有的<Think>和<Result>格式，即使用精炼后的文本替换掉原始文本<Think>和</Think>标签包裹的部分
+2. 如果发现<Result>中有额外字符或者不合适的十六进制编码、乱码，即使和label相同，也可以直接去掉，无需输出不一致信息。
+3. 不要补充任何提示语句，仅输出结果。
+
+## 输入：
+"""
+
+
+
+
+
+PROMPT_with_scoring_deepseek_with_criterion = """
+# Role Definition
+You are a network device information extraction expert, able to accurately determine the brand, model, and firmware version of the device to which a banner belongs. Now, please extract keywords for the following attributes from the given banner text and provide a confidence score, outputting the keywords and confidence scores in the format [keyword, confidence_score].
+Attributes to extract:
+1. The device manufacturer (brand) the banner belongs to. Extract the result in the following format: "brand": [["Keyword1", confidence_score], ["Keyword2", confidence_score],...[]]
+2. The device model (model) the banner belongs to. Extract the result in the following format: "model": [["Keyword1", confidence_score], ["Keyword2", confidence_score],...[]] 
+3. The device firmware version (version) the banner belongs to. Extract the result in the following format: "version": [["Keyword1", confidence_score], ["Keyword2", confidence_score],...[]]
+
+# Processing Rules (Violation will lead to errors)
+1. For firmware version, pay attention to excluding browser versions, obvious software library versions (e.g., jQuery/Chrome/Server), browser component versions, etc. Note that versions appearing multiple times in different URL paths might be the firmware version; judge carefully.
+2. For model, priority should be given to extracting combinations of letters, numbers, and delimiters. If there is no specific model but there is a series, you can lower the confidence and output the series result.
+3. If no result is extracted, you must also output an empty result, e.g.: "version": [["", 0.0]]
+4. The keywords for the brand, model, and firmware version fields must all be different. This is a rule that must be followed.
+5. You must provide a confidence score between 0 and 1 for each keyword. The higher the score, the more confident you are that this is the correct extraction result.
+6. Every conclusion needs to be supported by evidence, and the source of the confidence score for each keyword must also be explained. Please output a logically clear and detailed thought process to guide a small model in the future.
+
+# Scoring Guidelines
+## Brand Scoring Points:
+- Appearing in clear manufacturer/brand key-value pairs like "brand", "manufacturer", "vendor" should have the highest confidence.
+- Appearing near key fields like "title", "companyname" should have high confidence.
+- Manufacturers that appear multiple times in the banner can have their confidence score appropriately increased.
+- Keywords for unknown manufacturers that are shorter than 2 characters or are purely numeric should have the lowest confidence.
+- Keywords that are stop words ("unknown", "generic", "recording", "linux") or clearly not manufacturer names should have the lowest confidence.
+- Containing symbols like .()_ should lower the confidence.
+- Brands that do not explicitly appear should have their confidence lowered.
+
+## Model Scoring Points:
+- Appearing near key fields like "model", "product", "prod" should have the highest confidence.
+- Appearing near key fields like "device", "title", "welcome" should have high confidence.
+- Alphanumeric combination formats should have their confidence increased.
+- Appearing multiple times can appropriately increase the confidence.
+- Keywords that are stop words ("unknown", "generic", "device", "linux", "vt100", "notfound") or clearly incorrect models should have the lowest confidence.
+- Purely numeric and length < 4 should have the lowest confidence.
+
+## Version Scoring Points:
+- Appearing near key fields like "firmwareversion", "firmware", "fw", "fmwver" should have the highest confidence.
+- Appearing near key fields like "version", "v=", "build", "ver=" should have high confidence.
+- Containing delimiters (. or -) should increase the confidence.
+- Appearing multiple times can appropriately increase the confidence.
+- Being closer to brand/model keywords should increase the confidence.
+- Keywords that are purely alphabetic or purely numeric combinations should have their confidence lowered.
+- Alphanumeric combinations with a length less than 4 should have their confidence lowered.
+
+## Rules to Strictly Follow:
+- The final confidence score must be controlled between 0 and 1.
+- Do not easily output a confidence score of 1.0, unless there is direct evidence to confirm the answer is correct.
+
+# Output Rules
+1. Please think step-by-step. Every conclusion must be supported by evidence, especially regarding the determination of keywords and the consideration of confidence scores. Your thought process will be used to guide a small model in performing this task in the future. Please ensure the logic is clear and avoids waffle.
+2. Strictly ensure that the results are consistent with the reasoning process.
+3. The extraction result must be strict JSON and only contain the following three keys, in the format below:
+
+```json
+{
+  "brand": [["Keyword1", Score1], ["Keyword2", Score2],...],
+  "model": [["Keyword1", Score1], ["Keyword2", Score2],...], 
+  "version": [["Keyword1", Score1], ["Keyword2", Score2],...]
+}
+
+# banner:
+"""
+
+
+
+
+
+PROMPT_with_scoring_deepseek_with_criterion_ch = """
+# 角色定义
+你是一名网络设备信息提取专家，能够精准的判断banner所属设备的品牌、型号和固件版本，现在请从给定的banner文本中提取以下属性的关键词并给出置信度，以[关键词, 置信度分数]形式输出关键词和置信度。
+需要提取的属性：
+1. banner所属的设备厂商(brand)，提取结果以如下格式： "brand": [["关键词1", 置信度分数], ["关键词2", 置信度分数],...[]]
+2. banner所属的设备型号(model)，提取结果以如下格式： "model": [["关键词1", 置信度分数], ["关键词2", 置信度分数],...[]] 
+3. banner所属的设备固件版本(version)，提取结果以如下格式： "version": [["关键词1", 置信度分数], ["关键词2", 置信度分数],...[]]
+
+# 处理规则（违规将导致错误）
+1. 固件版本方面注意排除浏览器版本、明显的软件库版本（如jQuery/Chrome/Server）、浏览器组件版本等，注意多次出现在不同url路径中的版本有可能是固件版本，需要仔细判断
+2. 型号应该优先提取字母数字分隔符的组合，如果没有具体型号但有系列，可以降低置信度并输出系列结果
+3. 如果没有提取结果也需要输出空结果，例如："version": [["", 0.0]]
+4. 品牌、型号、固件版本三个字段的关键词均不相同，这是必须遵守的规则
+5. 每个关键词都需要提供一个0-1之间的置信度分数，分数越高表示越确信这是正确的提取结果
+6. 每个结论都需要有论据支撑，每个关键词的置信度分数来源也要说明。请输出逻辑清晰且详细的思考过程用于后续指导小模型
+
+# 评分指导原则
+## Brand评分要点：
+- 在"brand"、"manufacturer"、"vendor"类明确的厂商/品牌键值对中出现的，置信度应该最高
+- 在"title"、"companyname"等关键字段附近出现，置信度较高
+- 多次出现在banner中的厂商可以适当提高置信度
+- 关键词为未知厂商且长度小于2或者是纯数字时置信度应最低
+- 关键词为停止词("unknown", "generic", "recording", "linux")等明显非厂商名称的，置信度应最低
+- 包含.()_等符号，应该降低置信度
+- 没有显式出现的品牌应该降低置信度
+
+## Model评分要点：
+- 在"model"、"product"、"prod"等关键字段附近出现，置信度应该最高
+- 在"device"、"title"、"welcome"等关键字段附近出现，置信度较高
+- 字母数字组合格式应该提高置信度
+- 多次出现可以适当提高置信度
+- 关键词为停止词("unknown", "generic", "device", "linux", "vt100", "notfound")等明显错误的型号，置信度应最低
+- 纯数字且长度<4，置信度应最低
+
+## Version评分要点：
+- 在"firmwareversion"、"firmware"、"fw"、"fmwver"等关键字段附近出现，置信度应最高
+- 在"version"、"v="、"build"、"ver="、等关键字段附近出现，置信度较高
+- 包含分隔符(.或-)，应该提高置信度
+- 多次出现可以适当提高置信度
+- 距离品牌/型号关键词更近应该提高置信度
+- 纯字母组合或纯数字组合的关键词应该降低置信度
+- 长度小于4的纯字母数字组合应该降低置信度
+
+## 严格遵守的规则：
+- 最终置信度应控制在0-1之间。
+- 不要轻易输出1.0的置信度，除非有直接的证据确定答案正确
+
+# 输出规则
+1. 请一步一步思考，每个结论都要有论据支撑，尤其对于关键词的确定和置信度的考量，你的思考过程会被用于后续指导小模型执行任务，请保证逻辑清晰，不说废话
+2. 严格保证结果与推理过程的一致性
+3. 提取结果必须为严格JSON且只包含以下三个键，格式如下：
+
+```json
+{
+  "brand": [["关键词1", 分数1], ["关键词2", 分数2],...],
+  "model": [["关键词1", 分数1], ["关键词2", 分数2],...], 
+  "version": [["关键词1", 分数1], ["关键词2", 分数2],...]
+}
+
+# banner：
+"""
+
+
+
+
+
+
+### For student model:
+
+PROMPT_workfolw_extract_candidate_en = """
+# Role Definition
+You are a network device information extraction expert. You now need to extract keywords for the following attributes from the given banner, strictly according to the given rules:
+1. Brand (brand), extract the result in the following format: "brand": [""]
+2. Model (model), extract the result in the following format: "model": [""] 
+3. Firmware Version (version), extract the result in the following format: "version": [""]
+
+# Processing Rules (Violation will lead to errors)
+1. Pay attention to excluding browser versions, obvious software library versions (e.g., jQuery/Chrome/Server), browser component versions, etc.
+2. Versions that appear multiple times in static resources or script files are very likely the firmware version and can be extracted.
+3. If there is no specific model, but there is an abbreviation of the model, a series name, or a product name, extract those as well.
+4. If multiple models or versions appear and cannot be determined, output all of them. If no result is extracted, you must also output an empty list, e.g.: "version": [].
+5. Note that the brand extracted should be the device manufacturer, not a software or cloud service vendor.
+6. Strictly ensure that the keywords for brand, model, and firmware version are not identical.
+
+# Hints
+1. For the firmware version, focus on the text near the fields "Firmware", "Version", "ver=", or "v=", and understand its semantics.
+2. A version number that is closer to the brand and model keywords is more likely to be the firmware version.
+3. Brand and model are more likely to appear near 'login in' or 'title'. The field in 'Server' might not be the brand; analyze it carefully.
+
+# Special Handling Rules
+1. `candidate_brand`, `candidate_model`, and `candidate_version` are extraction results from preceding text segments. If they are not empty, they can be used as a reference, but do not extract them directly as the answer unless the same keywords also appear in the current text segment. All extractions must be based on the current data; candidate keywords can only be used as supporting evidence for inference.
+2. Pay attention to the output format. Do not output multiple JSON objects. If an attribute has multiple values, put all of them into the list.
+
+# Output Rules
+1. Please think step-by-step, and output the reasoning process and the extraction result separately. Every conclusion needs to be supported by evidence. Do not repeatedly output the same conclusion.
+2. The reasoning process must start with <think> and end with </think>. Strictly ensure consistency between the reasoning process and the output result. The output result must strictly follow the conclusions from the reasoning process.
+3. The extraction result must be strict JSON and only contain the following three keys, in the format below:
+```json
+{
+  "brand": [],
+  "model": [], 
+  "version": []
+}
+
+# Data and Candidate Keywords:
+
+"""
+
+
+PROMPT_workfolw_extract_candidate_ch = """
+# 角色定义
+你是一名网络设备信息提取专家，现在你需要从给定的banner中严格按给定的规则从原始数据中提取以下属性的关键词：
+1. 品牌(brand)，提取结果以如下格式： "brand": [""]
+2. 型号(model)，提取结果以如下格式： "model": [""] 
+3. 固件版本(version)，提取结果以如下格式： "version": [""]
+
+# 处理规则（违规将导致错误）
+1. 注意排除浏览器版本、明显的软件库版本（如jQuery/Chrome/Server）、浏览器组件版本等。
+2. 静态资源或脚本文件中多次出现的版本很可能就是固件版本，可以进行提取
+3. 如果没有具体型号但是有型号的缩写或者所属的系列名、产品名称，也都进行提取
+4. 如果出现多个型号或版本无法确定，则都输出。如果没有提取结果也需要输出空列表，例如："version": []
+5. 注意品牌应该提取的是设备制造商，而不是软件、云服务厂商
+6. 严格确保品牌、型号、固件版本的关键词不相同
+
+# 提示
+1. 固件版本方面重点关注字段“Firmware”或者“Version”或者“ver=”或者“v=”附近的文本，理解其语义
+2. 距离型号和品牌关键词更近的版本号更有可能是固件版本
+3. 品牌和型号更可能出现在login in或title附近，server中的字段有可能不是品牌，需要仔细分析
+
+# 特殊处理规则
+1. candidate_brand、candidate_model、candidate_version是文本分段之后前序文本的提取结果，若不为空，则可以作为参考，但不要直接作为答案提取，除非在本段文本中也出现了相同的关键词。所有的提取要以当前数据为主，候选关键词只能作为推断依据。
+2. 注意输出格式，不要输出多个json，若一个属性出现多个值则都放进列表中
+
+# 输出规则
+1. 请一步一步思考，分别输出推理过程和提取结果。每个结论都需要有论据支撑，不要反复输出同一结论
+2. 推理过程以<think>开始，</think>结束，严格保证推理过程和输出结果的一致性，输出结果要严格遵循推理过程中的结论
+3. 提取结果必须为严格JSON且只包含以下三个键，格式如下：
+```json
+{
+  "brand": [],
+  "model": [], 
+  "version": []
+}
+
+# 数据及候选关键词:
+"""
+
+
+
+
+PROMPT_with_scoring_llm_with_criterion_en = """
+# Role Definition
+You are a network device information extraction expert, able to accurately determine the brand, model, and firmware version of the device to which a banner belongs. Now, please extract keywords for the following attributes from the given banner text and provide a confidence score. Output the keywords and confidence scores in the format [keyword, confidence_score]. Strictly ensure that you do not casually output a confidence score of 1.0, unless there is explicit evidence that the keyword is definitely correct.
+
+Attributes to extract:
+1. The device manufacturer (brand) the banner belongs to. Extract the result in the following format: "brand": [["Keyword1", confidence_score], ["Keyword2", confidence_score],...[]]
+2. The device model (model) the banner belongs to. Extract the result in the following format: "model": [["Keyword1", confidence_score], ["Keyword2", confidence_score],...[]] 
+3. The device firmware version (version) the banner belongs to. Extract the result in the following format: "version": [["Keyword1", confidence_score], ["Keyword2", confidence_score],...[]]
+
+# Processing Rules (Violation will lead to errors)
+1. Pay attention to excluding browser versions, obvious software library versions (e.g., jQuery/Chrome/Server), browser component versions, etc.
+2. For the model, priority should be given to extracting combinations of letters, numbers, and delimiters, for example, M400-D12G.
+3. If no result is extracted, you must also output an empty result, for example: "version": [["", 0.0]]
+4. The keywords for the brand, model, and firmware version fields must all be different. This is a rule that must be followed.
+4. Pay extra attention that the final output version number must be consistent with the one in the data. Do not add or omit letters, numbers, or punctuation marks.
+5. You must provide a confidence score between 0 and 1 for each keyword. The higher the score, the more confident you are that this is the correct extraction result.
+6. Every conclusion needs to be supported by evidence. Strictly ensure consistency between the output result and the thought process.
+
+# Scoring Guidelines
+## Brand Scoring Points:
+- Appearing in clear manufacturer/brand key-value pairs like "brand", "manufacturer", "vendor" should have the highest confidence.
+- Appearing near key fields like "title", "companyname" should have high confidence.
+- Manufacturers that appear multiple times in the banner can have their confidence score appropriately increased.
+- Keywords for unknown manufacturers that are shorter than 2 characters or are purely numeric should have the lowest confidence.
+- Keywords that are stop words ("unknown", "generic", "recording", "linux") or clearly not manufacturer names should have the lowest confidence.
+- Containing symbols like .()_ should lower the confidence.
+- Brands that do not explicitly appear should have their confidence lowered.
+
+## Model Scoring Points:
+- Appearing near key fields like "model", "product", "prod" should have the highest confidence.
+- Appearing near key fields like "device", "title", "welcome" should have high confidence.
+- Formats with combinations of letters and numbers (e.g., RT-AC68U) should have their confidence increased.
+- Appearing multiple times can appropriately increase the confidence.
+- Keywords that are stop words ("unknown", "generic", "device", "linux", "vt100", "notfound") or clearly incorrect models should have the lowest confidence.
+- Purely numeric and length < 4 should have the lowest confidence.
+
+## Version Scoring Points:
+- Appearing near key fields like "firmwareversion", "firmware", "fw", "fmwver" should have the highest confidence.
+- Appearing near key fields like "version", "v=", "build", "ver=" should have high confidence.
+- Containing delimiters (. or -) should increase the confidence.
+- Appearing multiple times can appropriately increase the confidence.
+- Being closer to brand/model keywords should increase the confidence.
+- Keywords that are purely alphabetic or purely numeric combinations should have their confidence lowered.
+- Alphanumeric combinations with a length less than 4 should have their confidence lowered.
+
+## Rules to Strictly Follow:
+- The final confidence score must be controlled between 0 and 1.
+- Do not easily output a confidence score of 1.0, unless there is direct evidence to confirm the answer is correct.
+
+# Output Rules
+1. Please think step-by-step, and output the reasoning process and the extraction result separately.
+2. The reasoning process must start with <Think> and end with </Think>. Think carefully. Every conclusion must be supported by evidence, especially regarding the determination of keywords and the consideration of confidence scores.
+3. First, output the reasoning process, then extract the results from the reasoning process. Strictly ensure that the results are consistent with the reasoning process.
+4. The extraction result must start with <Result> and end with </Result>. The content must be strict JSON and only contain the following three keys, in the format below:
+
+```json
+{
+  "brand": [["Keyword1", Score1], ["Keyword2", Score2]],
+  "model": [["Keyword1", Score1], ["Keyword2", Score2]], 
+  "version": [["Keyword1", Score1], ["Keyword2", Score2]]
+}
+
+# Banner and Candidate Keywords:
+
+"""
+
+
+
+
+
+PROMPT_with_scoring_llm_with_criterion_ch = """
+# 角色定义
+你是一名网络设备信息提取专家，能够精准的判断banner所属设备的品牌、型号和固件版本，现在请从给定的banner文本中提取以下属性的关键词并给出置信度，以[关键词, 置信度分数]形式输出关键词和置信度，严格保证不随便输出1.0的置信度，除非有显性证据表明关键词一定正确。
+
+需要提取的属性：
+1. banner所属的设备厂商(brand)，提取结果以如下格式： "brand": [["关键词1", 置信度分数], ["关键词2", 置信度分数],...[]]
+2. banner所属的设备型号(model)，提取结果以如下格式： "model": [["关键词1", 置信度分数], ["关键词2", 置信度分数],...[]] 
+3. banner所属的设备固件版本(version)，提取结果以如下格式： "version": [["关键词1", 置信度分数], ["关键词2", 置信度分数],...[]]
+
+# 处理规则（违规将导致错误）
+1. 注意排除浏览器版本、明显的软件库版本（如jQuery/Chrome/Server）、浏览器组件版本等
+2. 型号应该优先提取字母数字分隔符的组合，例如M400-D12G
+3. 如果没有提取结果也需要输出空结果，例如："version": [["", 0.0]]
+4. 品牌、型号、固件版本三个字段的关键词均不相同，这是必须遵守的规则
+4. 格外注意最终输出的版本号应该和数据中的一致，不要添加或省略字母、数字、标点符号
+5. 每个关键词都需要提供一个0-1之间的置信度分数，分数越高表示越确信这是正确的提取结果
+6. 每个结论都需要有论据支撑，严格保证输出结果和思考过程的一致性
+
+# 评分指导原则
+## Brand评分要点：
+- 在"brand"、"manufacturer"、"vendor"类明确的厂商/品牌键值对中出现的，置信度应该最高
+- 在"title"、"companyname"等关键字段附近出现，置信度较高
+- 多次出现在banner中的厂商可以适当提高置信度
+- 关键词为未知厂商且长度小于2或者是纯数字时置信度应最低
+- 关键词为停止词("unknown", "generic", "recording", "linux")等明显非厂商名称的，置信度应最低
+- 包含.()_等符号，应该降低置信度
+- 没有显式出现的品牌应该降低置信度
+
+## Model评分要点：
+- 在"model"、"product"、"prod"等关键字段附近出现，置信度应该最高
+- 在"device"、"title"、"welcome"等关键字段附近出现，置信度较高
+- 字母数字组合格式（如RT-AC68U），应该提高置信度
+- 多次出现可以适当提高置信度
+- 关键词为停止词("unknown", "generic", "device", "linux", "vt100", "notfound")等明显错误的型号，置信度应最低
+- 纯数字且长度<4，置信度应最低
+
+## Version评分要点：
+- 在"firmwareversion"、"firmware"、"fw"、"fmwver"等关键字段附近出现，置信度应最高
+- 在"version"、"v="、"build"、"ver="、等关键字段附近出现，置信度较高
+- 包含分隔符(.或-)，应该提高置信度
+- 多次出现可以适当提高置信度
+- 距离品牌/型号关键词更近应该提高置信度
+- 纯字母组合或纯数字组合的关键词应该降低置信度
+- 长度小于4的纯字母数字组合应该降低置信度
+
+## 严格遵守的规则：
+- 最终置信度应控制在0-1之间。
+- 不要轻易输出1.0的置信度，除非有直接的证据确定答案正确
+
+# 输出规则
+1. 请一步一步思考，分别输出推理过程和提取结果
+2. 推理过程以<Think>开始，</Think>结束，认真思考，每个结论都要有论据支撑，尤其对于关键词的确定和置信度的考量
+3. 先输出推理过程，再从推理过程中提取结果，严格保证结果与推理过程的一致性
+3. 提取结果以<Result>开始，</Result>结束，内容必须为严格JSON且只包含以下三个键，格式如下：
+
+```json
+{
+  "brand": [["关键词1", 分数1], ["关键词2", 分数2]],
+  "model": [["关键词1", 分数1], ["关键词2", 分数2]], 
+  "version": [["关键词1", 分数1], ["关键词2", 分数2]]
+}
+
+# banner及候选关键词：
+"""
+
+
+
+
+
+PROMPT_with_scoring_llm_only_en = """
+# Role Definition
+You are a network device information extraction expert, able to accurately determine the brand, model, and firmware version of the device to which a banner belongs. Now, please extract keywords for the following attributes from the given banner text and provide a confidence score, outputting the keywords and confidence scores in the format [keyword, confidence_score].
+
+Attributes to extract:
+1. The device manufacturer (brand) the banner belongs to. Extract the result in the following format: "brand": [["Keyword1", confidence_score], ["Keyword2", confidence_score],...]
+2. The device model (model) the banner belongs to. Extract the result in the following format: "model": [["Keyword1", confidence_score], ["Keyword2", confidence_score],...] 
+3. The device firmware version (version) the banner belongs to. Extract the result in the following format: "version": [["Keyword1", confidence_score], ["Keyword2", confidence_score],...]
+
+# Processing Rules (Violation will lead to errors)
+1. Pay attention to excluding browser versions, obvious software library versions (e.g., jQuery/Chrome/Server), browser component versions, etc.
+2. If there is no specific model but there is a model abbreviation or a series name, extract those as well.
+3. If no result is extracted, you must also output an empty result, e.g.: "version": [["", 0.0]]
+4. The keywords for the brand, model, and firmware version fields must not be the same. If any two are identical, it indicates an extraction error and requires re-evaluation.
+4. Pay extra attention that the final output version number must be consistent with the one in the data. Do not add or omit letters, numbers, or punctuation marks.
+5. You must provide a confidence score between 0 and 1 for each keyword. The higher the score, the more confident you are that this is the correct extraction result.
+
+# Hints
+1. For firmware version, focus on the text near the fields "Firmware", "Version", or "ver=", understand its semantics. Versions appearing frequently in static resources or script files are very likely the firmware version.
+2. For model, focus on product identifiers, device names, etc.
+3. For brand, focus on manufacturer information.
+4. A version number that is closer to the brand and model keywords is more likely to be the firmware version.
+5. The given confidence score should reflect your judgment on the correctness of the keyword.
+
+# Output Rules
+1. Please think step-by-step, and output the reasoning process and the extraction result separately.
+2. The reasoning process must start with <think> and end with </think>.
+3. The output result must be strict JSON and only contain the following three keys, in the format below:
+
+```json
+{
+  "brand": [["Keyword1", Score1], ["Keyword2", Score2]],
+  "model": [["Keyword1", Score1], ["Keyword2", Score2]], Sort
+  "version": [["Keyword1", Score1], ["Keyword2", Score2]]
+}
+
+# Banner and Candidate Keywords:
+"""
+
+
+
+
+
+PROMPT_with_scoring_llm_only_ch = """
+# 角色定义
+你是一名网络设备信息提取专家，能够精准的判断banner所属设备的品牌、型号和固件版本，现在请从给定的banner文本中提取以下属性的关键词并给出置信度，以[关键词, 置信度分数]形式输出关键词和置信度。
+
+需要提取的属性：
+1. banner所属的设备厂商(brand)，提取结果以如下格式： "brand": [["关键词1", 置信度分数], ["关键词2", 置信度分数],...]
+2. banner所属的设备型号(model)，提取结果以如下格式： "model": [["关键词1", 置信度分数], ["关键词2", 置信度分数],...] 
+3. banner所属的设备固件版本(version)，提取结果以如下格式： "version": [["关键词1", 置信度分数], ["关键词2", 置信度分数],...]
+
+# 处理规则（违规将导致错误）
+1. 注意排除浏览器版本、明显的软件库版本（如jQuery/Chrome/Server）、浏览器组件版本等
+2. 如果没有具体型号但是有型号的缩写或者所属的系列名，也进行提取
+3. 如果没有提取结果也需要输出空结果，例如："version": [["", 0.0]]
+4. 品牌、型号、固件版本三个字段的关键词均不能相同，任意两个相同都表示提取存在错误，需要重新判断
+4. 格外注意最终输出的版本号应该和数据中的一致，不要添加或省略字母、数字、标点符号
+5. 每个关键词都需要提供一个0-1之间的置信度分数，分数越高表示越确信这是正确的提取结果
+
+# 提示
+1. 固件版本方面重点关注字段"Firmware"或者"Version"或者"ver="附近的文本，理解其语义，静态资源或脚本文件中频繁出现的版本很可能就代表固件版本
+2. 型号方面应关注产品标识、设备名称等信息
+3. 品牌方面应关注制造商、厂商等信息
+4. 距离型号和品牌关键词更近的版本号更有可能是固件版本
+5. 给出的置信度分数应该反映你对该关键词正确性的判断
+
+# 输出规则
+1. 请一步一步思考，分别输出推理过程和提取结果
+2. 推理过程以<think>开始，</think>结束
+3. 输出结果必须为严格JSON且只包含以下三个键，格式如下：
+
+```json
+{
+  "brand": [["关键词1", 分数1], ["关键词2", 分数2]],
+  "model": [["关键词1", 分数1], ["关键词2", 分数2]], 
+  "version": [["关键词1", 分数1], ["关键词2", 分数2]]
+}
+
+# banner及候选关键词：
+"""
+
+
+
+
+
+
+
+
+
+
+
+PROMPT_workflow_double_check_with_scoring_en = """
+# Role Definition
+You are a network device information extraction expert, able to accurately determine the brand, model, and firmware version of the device to which a banner belongs. Now, I have already filtered out candidate keywords from the banner and concatenated them with their context. You need to understand the text's semantics and determine which keywords are the correct device brand, model, and version combination.
+
+Attributes to extract:
+1. The device manufacturer (brand) the banner belongs to. Extract the result in the following format: "brand": [["Keyword", confidence_score]]
+2. The device model (model) the banner belongs to. Extract the result in the following format: "model": [["Keyword", confidence_score]] 
+3. The device firmware version (version) the banner belongs to. Extract the result in the following format: "version": [["Keyword", confidence_score]]
+
+# Processing Rules (Violation will lead to errors)
+1. Pay attention to excluding browser versions, obvious software library versions (e.g., jQuery/Chrome/Server), browser component versions, etc.
+2. If there is no specific model but there is a model abbreviation or a series name, extract those as well.
+3. If no result is extracted, you must also output an empty list, e.g.: "version": []
+4. Pay extra attention that the final output version number must be consistent with the one in the data. Do not add or omit letters, numbers, or punctuation marks.
+5. You must provide a confidence score between 0 and 1 for each keyword. The higher the confidence, the higher the probability that this is the correct extraction result.
+
+# Scoring Guidelines
+## Brand Scoring Points:
+- Appearing in clear manufacturer/brand key-value pairs like "brand", "manufacturer", "vendor" should have the highest confidence.
+- Appearing near key fields like "title", "companyname" should have high confidence.
+- Manufacturers that appear multiple times in the banner can have their confidence score appropriately increased.
+- Keywords for unknown manufacturers that are shorter than 2 characters or are purely numeric should have the lowest confidence.
+- Keywords that are stop words ("unknown", "generic", "recording", "linux") or clearly not manufacturer names should have the lowest confidence.
+- Containing symbols like .()_ should lower the confidence.
+
+## Model Scoring Points:
+- Appearing near key fields like "model", "product", "prod" should have the highest confidence.
+- Appearing near key fields like "device", "title", "welcome" should have high confidence.
+- Alphanumeric combination formats (e.g., RT-AC68U) should have their confidence increased.
+- Appearing multiple times can appropriately increase the confidence.
+- Keywords that are stop words ("unknown", "generic", "device", "linux", "vt100", "notfound") or clearly incorrect models should have the lowest confidence.
+- Purely numeric and length < 4 should have the lowest confidence.
+
+## Version Scoring Points:
+- Appearing near key fields like "firmwareversion", "firmware", "fw", "fmwver" should have the highest confidence.
+- Appearing near key fields like "version", "v=", "build", "ver=" should have high confidence.
+- Containing delimiters (. or -) should increase the confidence.
+- Appearing multiple times can appropriately increase the confidence.
+- Being closer to brand/model keywords should increase the confidence.
+- Keywords that are purely alphabetic combinations should have their confidence lowered.
+- Alphanumeric combinations with a length less than 4 should have their confidence lowered.
+
+## Other Points:
+- Note: The final confidence score should be controlled between 0 and 1, representing the probability that the keyword is correct. Do not easily output a confidence score of 1.0, unless there is direct evidence to confirm the answer is correct.
+
+# Hints
+1. For firmware version, focus on the text near the fields "Firmware", "Version", or "ver=", understand its semantics. Versions appearing frequently in static resources or script files are very likely the firmware version.
+2. For model, focus on product identifiers, device names, etc.
+3. For brand, focus on manufacturer information.
+4. A version number that is closer to the brand and model keywords is more likely to be the firmware version.
+5. The given confidence score should reflect your judgment on the correctness of the keyword.
+
+# Output Rules
+1. Please think step-by-step, and output the reasoning process and the extraction result separately.
+2. The reasoning process must start with <think> and end with </think>. Keep it concise and accurate, do not be repetitive, but think carefully.
+3. The extraction result must be strict JSON and only contain the following three keys, in the format below:
+
+```json
+{
+  "brand": [["Keyword1", Score1], ["Keyword2", Score2]],
+  "model": [["Keyword1", Score1], ["Keyword2", Score2]], 
+  "version": [["Keyword1", Score1], ["Keyword2", Score2]]
+}
+
+# Banner and Candidate Keywords:
+"""
+
+
+
+
+
+PROMPT_workflow_double_check_with_scoring_ch = """
+# 角色定义
+你是一名网络设备信息提取专家，能够精准的判断banner所属设备的品牌、型号和固件版本。现在我已经从banner中筛选出了候选关键词并将其上下文并进行了拼接，你需要理解文本的语义并判断那些关键词是正确的设备品牌、型号、版本组合。
+
+需要提取的属性：
+1. banner所属的设备厂商(brand)，提取结果以如下格式： "brand": [["关键词", 置信度分数]]
+2. banner所属的设备型号(model)，提取结果以如下格式： "model": [["关键词", 置信度分数]] 
+3. banner所属的设备固件版本(version)，提取结果以如下格式： "version": [["关键词", 置信度分数]]
+
+# 处理规则（违规将导致错误）
+1. 注意排除浏览器版本、明显的软件库版本（如jQuery/Chrome/Server）、浏览器组件版本等
+2. 如果没有具体型号但是有型号的缩写或者所属的系列名，也进行提取
+3. 如果没有提取结果也需要输出空列表，例如："version": []
+4. 格外注意最终输出的版本号应该和数据中的一致，不要添加或省略字母、数字、标点符号
+5. 每个关键词都需要提供一个0-1之间的置信度，置信度越高表示这是正确的提取结果的概率越高
+
+# 评分指导原则
+## Brand评分要点：
+- 在"brand"、"manufacturer"、"vendor"类明确的厂商/品牌键值对中出现的，置信度应该最高
+- 在"title"、"companyname"等关键字段附近出现，置信度较高
+- 多次出现在banner中的厂商可以适当提高置信度
+- 关键词为未知厂商且长度小于2或者是纯数字时置信度应最低
+- 关键词为停止词("unknown", "generic", "recording", "linux")等明显非厂商名称的，置信度应最低
+- 包含.()_等符号，应该降低置信度
+
+## Model评分要点：
+- 在"model"、"product"、"prod"等关键字段附近出现，置信度应该最高
+- 在"device"、"title"、"welcome"等关键字段附近出现，置信度较高
+- 字母数字组合格式（如RT-AC68U），应该提高置信度
+- 多次出现可以适当提高置信度
+- 关键词为停止词("unknown", "generic", "device", "linux", "vt100", "notfound")等明显错误的型号，置信度应最低
+- 纯数字且长度<4，置信度应最低
+
+## Version评分要点：
+- 在"firmwareversion"、"firmware"、"fw"、"fmwver"等关键字段附近出现，置信度应最高
+- 在"version"、"v="、"build"、"ver="、等关键字段附近出现，置信度较高
+- 包含分隔符(.或-)，应该提高置信度
+- 多次出现可以适当提高置信度
+- 距离品牌/型号关键词更近应该提高置信度
+- 纯字母组合的关键词应该降低置信度
+- 长度小于4的纯字母数字组合应该降低置信度
+
+## 其他要点：
+- 注意最终置信度应控制在0-1之间，表示关键词正确的概率。不要轻易输出1.0的置信度，除非有直接的证据确定答案正确
+
+# 提示
+1. 固件版本方面重点关注字段"Firmware"或者"Version"或者"ver="附近的文本，理解其语义，静态资源或脚本文件中频繁出现的版本很可能就代表固件版本
+2. 型号方面应关注产品标识、设备名称等信息
+3. 品牌方面应关注制造商、厂商等信息
+4. 距离型号和品牌关键词更近的版本号更有可能是固件版本
+5. 给出的置信度分数应该反映你对该关键词正确性的判断
+
+# 输出规则
+1. 请一步一步思考，分别输出推理过程和提取结果
+2. 推理过程以<think>开始，</think>结束，尽量简短准确，不要反复，但需要认真思考
+3. 提取结果必须为严格JSON且只包含以下三个键，格式如下：
+
+```json
+{
+  "brand": [["关键词1", 分数1], ["关键词2", 分数2]],
+  "model": [["关键词1", 分数1], ["关键词2", 分数2]], 
+  "version": [["关键词1", 分数1], ["关键词2", 分数2]]
+}
+
+# banner及候选关键词：
+"""
+
+
+
+
+
+
+
+
+PROMPT_workfolw_verify_en = """
+# Role Definition
+You are a network device information extraction expert, able to accurately determine the brand, model, and firmware version of the device to which a banner belongs.
+
+# Task Definition
+Now I have already filtered out candidate keywords from the banner, concatenated them with their context. You need to understand the banner's semantics, extract the correct brand, model, and firmware version, and provide a confidence score (between 0-1) for each keyword.
+I will provide you with some collected models and versions from a knowledge base as a reference. You need to learn the version naming format for each model to extract the correct firmware version.
+The attributes to extract are as follows:
+1. The device manufacturer (brand) the banner belongs to. Extract the result in the following format: "brand": [[keyword, confidence]]
+2. The device model (model) the banner belongs to. Extract the result in the following format: "model": [[keyword, confidence]]
+3. The device firmware version (version) the banner belongs to. Extract the result in the following format: "version": [[keyword, confidence]]
+
+# Processing Rules (Violation will lead to errors)
+1. Pay attention to learning the version naming formats. If a keyword appears in the banner that is not known but matches the naming format of existing versions, it might be a new firmware version.
+2. Do not invent models or versions that do not appear in the banner.
+3. The models and versions in the knowledge base may have different formats from those appearing in the banner, especially regarding abbreviations and delimiters. You need to think carefully and use semantic understanding to determine if they are the same model or version.
+3. If the extracted version is not in the knowledge base, but it matches the version naming pattern for that model in the collected knowledge base, then extract it. If there is no version matching the pattern, output an empty result to avoid extracting an incorrect version.
+4. If no result is extracted, you must also output an empty result and confidence, e.g.: "version": ["", confidence].
+5. Note that the final confidence score should be controlled between 0 and 1, representing the probability that the keyword is correct. Do not easily output a confidence score of 1.0, unless there is direct evidence to confirm the answer is correct.
+6. You should lean towards avoiding outputting incorrect versions: If the knowledge base information includes versions, strictly extract version keywords according to the version patterns in the knowledge base. If no keywords matching the version formats in the knowledge base appear in the text, output an empty version.
+
+# Hints
+- For firmware version, focus on the text near the fields "Firmware", "Version", or "ver=", understand its semantics. Versions appearing frequently in static resources or script files are very likely the firmware version.
+- A version number that is closer to the brand and model keywords is more likely to be the firmware version.
+- The output result must be strictly consistent with the thought process.
+
+# Output Rules
+1. Please think step-by-step, and output the reasoning process and the extraction result separately.
+2. The reasoning process must start with <think> and end with </think>. Do not be repetitive, think carefully. The output result must be strictly consistent with the conclusions of the reasoning process.
+3. The extraction result must be strict JSON and only contain the following three keys, in the format below:
+```json
+{
+  "brand": [[keyword, confidence]],
+  "model": [[keyword, confidence]], 
+  "version": [[keyword, confidence]]
+}
+
+# Data and Knowledge Base Reference:
+"""
+
+
+
+PROMPT_workfolw_verify_ch = """
+# 角色定义
+你是一名网络设备信息提取专家，能够精准的判断banner所属设备的品牌、型号和固件版本。
+
+# 任务定义
+现在我已经从banner中筛选出了候选关键词及其上下文并进行了拼接，你需要理解banner的语义并提取出正确的品牌、型号、固件版本并给出每个关键词的置信度(0-1)之间。
+我会从知识库中给你一些已收集到的型号版本作为参考，你需要学习每个型号的版本命名格式，从而提取出正确的固件版本。
+需要提取的属性如下：
+1. banner所属的设备厂商(brand)，提取结果以如下格式： "brand": [[keyword, confidence]]
+2. banner所属的设备型号(model)，提取结果以如下格式： "model": [[keyword, confidence]]
+3. banner所属的设备固件版本(version)，提取结果以如下格式： "version": [[keyword, confidence]]
+
+# 处理规则（违规将导致错误）
+1. 注意学习版本的命名格式，banner中若出现非已知但命名格式与现有版本相同的关键词，可能就是新的固件版本
+2. 不要杜撰banner中没有出现的型号和版本
+3. 知识库中的型号和版本可能和banner中出现的格式不一样，尤其是在缩写、分隔符方面，需要认真思考并进行语义理解来判断是否是同一型号或版本
+3. 如果提取的版本不在知识库中，但是符合型号在收集的知识库中的版本命名模式，则进行提取，若没有符合模式的版本则输出空结果，避免提取错误的版本。
+4. 如果没有提取结果也需要输出空结果和置信度，例如："version": ["", confidence]。
+5. 注意最终置信度应控制在0-1之间，表示关键词正确的概率。不要轻易输出1.0的置信度，除非有直接的证据表明答案正确
+6. 你应该倾向于避免输出错误的版本：若知识库中的信息包含版本，则严格按照知识库中的版本模式提取版本关键词，若文中没有出现与知识库中版本格式相符的关键词则输出空版本
+
+# 提示
+- 固件版本方面重点关注字段“Firmware”或者“Version”或者“ver=”附近的文本，理解其语义，静态资源或脚本文件中频繁出现的版本很可能就代表固件版本
+- 距离型号和品牌关键词更近的版本号更有可能是固件版本
+- 输出的结果必须严格与思考过程一致
+
+# 输出规则
+1. 请一步一步思考，分别输出推理过程和提取结果。
+2. 推理过程以<think>开始，</think>结束，不要反复，认真思考，输出的结果必须严格与推理过程的结论一致。
+3. 提取结果必须为严格JSON且只包含以下三个键，格式如下：
+```json
+{
+  "brand": [[keyword, confidence]],
+  "model": [[keyword, confidence]], 
+  "version": [[keyword, confidence]]
+}
+
+# 数据及知识库参考:
+"""
