@@ -1,5 +1,5 @@
 # FirmGenie  
-**A Confidence-Aware Expert LLM Framework for Fine-grained Network Device Identification**
+**FirmGenie: A Confidence-Aware Expert LLM Framework for Firmware Version Identification on Network Devices**
 
 This repository contains the implementation and experimental artifacts for **FirmGenie**, an expert large language model framework designed for fine-grained firmware version identification from noisy network banners. FirmGenie integrates domain-specific supervised fine-tuning, knowledge augmentation, and multi-source confidence discrimination to achieve accurate and scalable firmware version identification under real-world Internet conditions.
 
