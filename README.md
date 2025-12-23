@@ -7,13 +7,14 @@ This repository contains the implementation and experimental artifacts for **Fir
 
 ## Repository Structure
 
+```
 ├── Confidence_Discriminator/ # Multi-source confidence discriminator module
 ├── Knowledge_base/ # Structured knowledge base and validation rules
 ├── SFT_module/ # Supervised fine-tuning (SFT) for the expert LLM
 ├── inference/ # End-to-end inference pipeline
 ├── FirmGenie_Rebuttal_Revised_Version.pdf
 ├── README.md
-
+```
 
 ---
 
