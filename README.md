@@ -42,11 +42,10 @@ This repository includes **additional materials prepared during the rebuttal pha
 
 - **`FirmGenie_Rebuttal_Revised_Version.pdf`**  
   This PDF is a carefully revised version of the manuscript prepared in response to reviewers’ comments.
-#### Revisions span multiple sections, including the abstract, introduction, experimental evaluation, conclusion, and references. 
-
+#### 1. Revisions span multiple sections, including the abstract, introduction, experimental evaluation, conclusion, and references. 
 All substantive changes are explicitly highlighted in **red** to facilitate review and comparison.
 
-#### Added Model Efficiency Experiments (Appendix)
+#### 2. Added Model Efficiency Experiments (Appendix)
 
 To provide **additional evidence during the rebuttal stage**, we introduced a new appendix in the revised paper that reports **supplementary efficiency experiments**, including:
 
